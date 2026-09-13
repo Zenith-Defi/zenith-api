@@ -90,6 +90,31 @@ export const CreateApiKeySchema = z
   .object({ label: z.string().max(120).optional() })
   .openapi("CreateApiKey");
 
+export const MerchantSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    stellarAccount: z.string(),
+    defaultMode: z.enum(["muxed", "vault"]),
+    createdAt: z.string(),
+  })
+  .openapi("Merchant");
+
+export const WebhookDeliverySchema = z
+  .object({
+    id: z.string().uuid(),
+    endpointId: z.string().uuid(),
+    eventId: z.string().uuid(),
+    eventType: z.string(),
+    status: z.enum(["pending", "delivered", "failed", "dead"]),
+    attempts: z.number().int(),
+    lastResponseStatus: z.number().int().nullable(),
+    lastResponseBody: z.string().nullable(),
+    lastAttemptAt: z.string().nullable(),
+    createdAt: z.string(),
+  })
+  .openapi("WebhookDelivery");
+
 export const ErrorSchema = z
   .object({
     error: z.object({

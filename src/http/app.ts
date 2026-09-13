@@ -9,7 +9,14 @@ import { invoiceChannel } from "../events/emit.js";
 import { webhookQueue } from "../webhooks/queue.js";
 import { cancelInvoice, createInvoice } from "../invoice/service.js";
 import { hashRequest, lookupIdempotent, storeIdempotent } from "./idempotency.js";
-import { serializeApiKey, serializeEndpoint, serializeInvoice, serializePayment } from "./serialize.js";
+import {
+  serializeApiKey,
+  serializeDelivery,
+  serializeEndpoint,
+  serializeInvoice,
+  serializeMerchant,
+  serializePayment,
+} from "./serialize.js";
 import {
   ApiKeySchema,
   CreateApiKeySchema,
@@ -18,7 +25,9 @@ import {
   ErrorSchema,
   InvoiceSchema,
   ListQuerySchema,
+  MerchantSchema,
   PaymentSchema,
+  WebhookDeliverySchema,
   WebhookEndpointSchema,
 } from "./schemas.js";
 
@@ -239,6 +248,31 @@ app.openapi(listEndpointsRoute, async (c) => {
   return c.json({ data: rows.map(serializeEndpoint) }, 200);
 });
 
+const listDeliveriesRoute = createRoute({
+  method: "get",
+  path: "/v1/webhook-endpoints/{id}/deliveries",
+  summary: "List an endpoint's delivery log",
+  request: { params: z.object({ id: z.string().uuid() }), query: ListQuerySchema },
+  responses: {
+    200: { content: { "application/json": { schema: z.object({ data: z.array(WebhookDeliverySchema) }) } }, description: "OK" },
+    ...jsonError,
+  },
+});
+
+app.openapi(listDeliveriesRoute, async (c) => {
+  const merchantId = c.get("merchantId");
+  const { id } = c.req.valid("param");
+  const { limit } = c.req.valid("query");
+  const endpoint = await db.query.webhookEndpoints.findFirst({ where: eq(schema.webhookEndpoints.id, id) });
+  if (!endpoint || endpoint.merchantId !== merchantId) return c.json(err("not_found", "No such endpoint"), 404);
+  const rows = await db.query.webhookDeliveries.findMany({
+    where: eq(schema.webhookDeliveries.endpointId, id),
+    orderBy: desc(schema.webhookDeliveries.createdAt),
+    limit,
+  });
+  return c.json({ data: rows.map(serializeDelivery) }, 200);
+});
+
 const deleteEndpointRoute = createRoute({
   method: "delete",
   path: "/v1/webhook-endpoints/{id}",
@@ -286,6 +320,23 @@ app.openapi(replayRoute, async (c) => {
   await db.update(schema.webhookDeliveries).set({ status: "pending" }).where(eq(schema.webhookDeliveries.id, id));
   await webhookQueue().add("deliver", { deliveryId: id });
   return c.json({ deliveryId: id }, 202);
+});
+
+const meRoute = createRoute({
+  method: "get",
+  path: "/v1/me",
+  summary: "The authenticated merchant",
+  responses: {
+    200: { content: { "application/json": { schema: MerchantSchema } }, description: "OK" },
+    ...jsonError,
+  },
+});
+
+app.openapi(meRoute, async (c) => {
+  const merchantId = c.get("merchantId");
+  const merchant = await db.query.merchants.findFirst({ where: eq(schema.merchants.id, merchantId) });
+  if (!merchant) return c.json(err("not_found", "No such merchant"), 404);
+  return c.json(serializeMerchant(merchant), 200);
 });
 
 // API key management. A key authenticates as its merchant and can mint and

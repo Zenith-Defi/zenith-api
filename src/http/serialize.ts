@@ -5,6 +5,33 @@ type InvoiceRow = typeof schema.invoices.$inferSelect;
 type PaymentRow = typeof schema.payments.$inferSelect;
 type EndpointRow = typeof schema.webhookEndpoints.$inferSelect;
 type ApiKeyRow = typeof schema.apiKeys.$inferSelect;
+type MerchantRow = typeof schema.merchants.$inferSelect;
+type DeliveryRow = typeof schema.webhookDeliveries.$inferSelect;
+
+export function serializeMerchant(row: MerchantRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    stellarAccount: row.stellarAccount,
+    defaultMode: row.defaultMode,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export function serializeDelivery(row: DeliveryRow) {
+  return {
+    id: row.id,
+    endpointId: row.endpointId,
+    eventId: row.eventId,
+    eventType: row.eventType,
+    status: row.status,
+    attempts: row.attempts,
+    lastResponseStatus: row.lastResponseStatus,
+    lastResponseBody: row.lastResponseBody,
+    lastAttemptAt: row.lastAttemptAt ? row.lastAttemptAt.toISOString() : null,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
 
 export function checkoutUrl(invoiceId: bigint): string {
   return `${env.CHECKOUT_BASE_URL}/pay/${invoiceId.toString()}`;
