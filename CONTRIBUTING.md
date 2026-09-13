@@ -9,8 +9,8 @@ Zenith is a non-custodial crypto checkout on Stellar. A merchant creates an invo
 It ships as three repositories:
 
 - **zenith-api** (you are here) — the REST API, invoice state machine, muxed address derivation, payment watcher, and webhook dispatcher. It owns the OpenAPI document and the webhook event catalogue.
-- **[zenith-sdk](https://github.com/Elizabethxxx/zenith-sdk)** — the TypeScript client, generated from this repo's `openapi.json` and hand-wrapped.
-- **[zenith-web](https://github.com/Elizabethxxx/zenith-web)** — the Next.js checkout page and merchant dashboard, which talk to the API only through the SDK.
+- **[zenith-sdk](https://github.com/Zenith-Defi/zenith-sdk)** — the TypeScript client, generated from this repo's `openapi.json` and hand-wrapped.
+- **[zenith-web](https://github.com/Zenith-Defi/zenith-web)** — the Next.js checkout page and merchant dashboard, which talk to the API only through the SDK.
 
 Dependencies point one way: api, then sdk, then web, never reversed. A change in the API can require changes downstream; a change in the app never dictates the API. The cross-repository rules are in [docs/multi-repo.md](docs/multi-repo.md).
 
@@ -81,7 +81,7 @@ Prerequisites:
 You do not need to deploy anything of your own. The seed script creates and funds a Testnet account for you with Friendbot, so there is no key to obtain by hand.
 
 ```bash
-git clone https://github.com/Elizabethxxx/zenith-api
+git clone https://github.com/Zenith-Defi/zenith-api
 cd zenith-api
 pnpm install
 cp .env.example .env
