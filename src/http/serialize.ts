@@ -4,6 +4,7 @@ import type { schema } from "../db/client.js";
 type InvoiceRow = typeof schema.invoices.$inferSelect;
 type PaymentRow = typeof schema.payments.$inferSelect;
 type EndpointRow = typeof schema.webhookEndpoints.$inferSelect;
+type ApiKeyRow = typeof schema.apiKeys.$inferSelect;
 
 export function checkoutUrl(invoiceId: bigint): string {
   return `${env.CHECKOUT_BASE_URL}/pay/${invoiceId.toString()}`;
@@ -35,6 +36,19 @@ export function serializePayment(row: PaymentRow) {
     fromAccount: row.fromAccount,
     asset: { code: row.assetCode, issuer: row.assetIssuer },
     amount: row.amount,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+// The hash and any plaintext are never serialised. Only the non-secret prefix
+// leaves the database.
+export function serializeApiKey(row: ApiKeyRow) {
+  return {
+    id: row.id,
+    prefix: row.prefix,
+    label: row.label,
+    lastUsedAt: row.lastUsedAt ? row.lastUsedAt.toISOString() : null,
+    revokedAt: row.revokedAt ? row.revokedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
 }

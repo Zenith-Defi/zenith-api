@@ -2,15 +2,17 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { streamSSE } from "hono/streaming";
-import { authenticate } from "../auth/apiKey.js";
+import { authenticate, generateApiKey } from "../auth/apiKey.js";
 import { db, schema } from "../db/client.js";
 import { createRedis } from "../lib/redis.js";
 import { invoiceChannel } from "../events/emit.js";
 import { webhookQueue } from "../webhooks/queue.js";
 import { cancelInvoice, createInvoice } from "../invoice/service.js";
 import { hashRequest, lookupIdempotent, storeIdempotent } from "./idempotency.js";
-import { serializeEndpoint, serializeInvoice, serializePayment } from "./serialize.js";
+import { serializeApiKey, serializeEndpoint, serializeInvoice, serializePayment } from "./serialize.js";
 import {
+  ApiKeySchema,
+  CreateApiKeySchema,
   CreateInvoiceSchema,
   CreateWebhookEndpointSchema,
   ErrorSchema,
@@ -284,6 +286,74 @@ app.openapi(replayRoute, async (c) => {
   await db.update(schema.webhookDeliveries).set({ status: "pending" }).where(eq(schema.webhookDeliveries.id, id));
   await webhookQueue().add("deliver", { deliveryId: id });
   return c.json({ deliveryId: id }, 202);
+});
+
+// API key management. A key authenticates as its merchant and can mint and
+// revoke sibling keys for that same merchant. The plaintext is returned once on
+// creation and never again; only the hash is stored.
+const createApiKeyRoute = createRoute({
+  method: "post",
+  path: "/v1/api-keys",
+  summary: "Create an API key",
+  request: { body: { content: { "application/json": { schema: CreateApiKeySchema } } } },
+  responses: {
+    201: {
+      content: { "application/json": { schema: ApiKeySchema.extend({ plaintext: z.string() }) } },
+      description: "Created; plaintext is returned once",
+    },
+    ...jsonError,
+  },
+});
+
+app.openapi(createApiKeyRoute, async (c) => {
+  const merchantId = c.get("merchantId");
+  const { label } = c.req.valid("json");
+  const key = generateApiKey();
+  const [row] = await db
+    .insert(schema.apiKeys)
+    .values({ merchantId, hash: key.hash, prefix: key.prefix, label: label ?? null })
+    .returning();
+  return c.json({ ...serializeApiKey(row!), plaintext: key.plaintext }, 201);
+});
+
+const listApiKeysRoute = createRoute({
+  method: "get",
+  path: "/v1/api-keys",
+  summary: "List API keys",
+  responses: {
+    200: { content: { "application/json": { schema: z.object({ data: z.array(ApiKeySchema) }) } }, description: "OK" },
+    ...jsonError,
+  },
+});
+
+app.openapi(listApiKeysRoute, async (c) => {
+  const merchantId = c.get("merchantId");
+  const rows = await db.query.apiKeys.findMany({ where: eq(schema.apiKeys.merchantId, merchantId) });
+  return c.json({ data: rows.map(serializeApiKey) }, 200);
+});
+
+const revokeApiKeyRoute = createRoute({
+  method: "post",
+  path: "/v1/api-keys/{id}/revoke",
+  summary: "Revoke an API key",
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { content: { "application/json": { schema: ApiKeySchema } }, description: "Revoked" },
+    ...jsonError,
+  },
+});
+
+app.openapi(revokeApiKeyRoute, async (c) => {
+  const merchantId = c.get("merchantId");
+  const { id } = c.req.valid("param");
+  const row = await db.query.apiKeys.findFirst({ where: eq(schema.apiKeys.id, id) });
+  if (!row || row.merchantId !== merchantId) return c.json(err("not_found", "No such key"), 404);
+  const [updated] = await db
+    .update(schema.apiKeys)
+    .set({ revokedAt: row.revokedAt ?? new Date() })
+    .where(eq(schema.apiKeys.id, id))
+    .returning();
+  return c.json(serializeApiKey(updated!), 200);
 });
 
 // Server-sent events for a single invoice. Public: the checkout page opens this

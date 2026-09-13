@@ -75,6 +75,21 @@ export const CreateWebhookEndpointSchema = z
   })
   .openapi("CreateWebhookEndpoint");
 
+export const ApiKeySchema = z
+  .object({
+    id: z.string().uuid(),
+    prefix: z.string().openapi({ example: "zk_test_ABCD" }),
+    label: z.string().nullable(),
+    lastUsedAt: z.string().nullable(),
+    revokedAt: z.string().nullable(),
+    createdAt: z.string(),
+  })
+  .openapi("ApiKey");
+
+export const CreateApiKeySchema = z
+  .object({ label: z.string().max(120).optional() })
+  .openapi("CreateApiKey");
+
 export const ErrorSchema = z
   .object({
     error: z.object({
