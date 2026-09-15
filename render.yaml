@@ -1,0 +1,54 @@
+# Render Blueprint for zenith-api. One Docker image, three always-on services:
+# the HTTP API, the webhook delivery worker, and the Horizon payment watcher.
+# Migrations and the demo seed run once per deploy via preDeployCommand on the
+# API service. Provision Postgres and Redis separately (Neon and Upstash) and
+# paste their URLs into the shared environment group in the dashboard.
+envVarGroups:
+  - name: zenith-shared
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: CHECKOUT_BASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: STELLAR_SECRET
+        sync: false
+      - key: STELLAR_NETWORK
+        value: testnet
+      - key: HORIZON_URL
+        value: https://horizon-testnet.stellar.org
+      - key: NETWORK_PASSPHRASE
+        value: "Test SDF Network ; September 2015"
+
+services:
+  - type: web
+    name: zenith-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: node dist/index.js
+    healthCheckPath: /healthz
+    plan: starter
+    preDeployCommand: pnpm db:migrate && pnpm seed:demo
+    envVars:
+      - fromGroup: zenith-shared
+
+  - type: worker
+    name: zenith-webhook-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: node dist/webhooks/worker.js
+    plan: starter
+    envVars:
+      - fromGroup: zenith-shared
+
+  - type: worker
+    name: zenith-watcher
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: node dist/watcher/index.js
+    plan: starter
+    envVars:
+      - fromGroup: zenith-shared
