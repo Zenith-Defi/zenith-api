@@ -86,10 +86,23 @@ See [docs/api.md](docs/api.md), [docs/webhooks.md](docs/webhooks.md) and [docs/a
 - `pnpm watcher` — Horizon payment watcher
 - `pnpm db:generate` / `pnpm db:migrate` / `pnpm db:check`
 - `pnpm seed` — demo merchant and API key
+- `pnpm seed:demo` — fixed, publishable demo merchant for a hosted read-only demo
 - `pnpm openapi:emit` — regenerate `openapi.json`
 - `pnpm lint` / `pnpm typecheck` / `pnpm test` / `pnpm build`
 
+## Deployment
+
+`render.yaml` is a Render Blueprint that runs three always-on services from one Docker image: the HTTP API (`node dist/index.js`, health check at `/healthz`), the webhook worker (`node dist/webhooks/worker.js`), and the payment watcher (`node dist/watcher/index.js`). The watcher is a separate long-running process, not a serverless handler. Migrations and the demo seed run once per deploy through the API service's `preDeployCommand`.
+
+Provision Postgres (Neon or Supabase) and Redis (Upstash) separately and paste their connection strings into the `zenith-shared` environment group. Set `CHECKOUT_BASE_URL` and `CORS_ORIGIN` to the deployed web origin.
+
 ## Status
+
+Built to roughly 65% of the product. What works: invoice creation with idempotency, muxed address derivation, the payment watcher against Testnet, signed webhooks with retries and a delivery log, server-sent events, and the demo pay loop. What is deliberately not built and filed in [ISSUES.md](ISSUES.md): the Soroban vault mode, splits, on-chain refunds, anchor settlement, rate limiting, and mainnet.
+
+Deployed on Render (API, webhook worker, payment watcher) against Neon Postgres and Upstash Redis. Everything runs on Stellar Testnet only: the API refuses to start against a mainnet Horizon URL, and there is no custody of funds at any point.
+
+Unaudited and Testnet-only. See [SECURITY.md](SECURITY.md).
 
 Built to roughly 65% of the product. What works: invoice creation with idempotency, muxed address derivation, the payment watcher against Testnet, signed webhooks with retries and a delivery log, server-sent events, and the demo pay loop. What is deliberately not built and filed in [ISSUES.md](ISSUES.md): the Soroban vault mode, splits, on-chain refunds, anchor settlement, rate limiting, and mainnet.
 
