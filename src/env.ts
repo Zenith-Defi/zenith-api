@@ -12,6 +12,10 @@ const schema = z.object({
   NETWORK_PASSPHRASE: z.string().default("Test SDF Network ; September 2015"),
   CHECKOUT_BASE_URL: z.string().url().default("http://localhost:3000"),
   STELLAR_SECRET: z.string().optional(),
+  // Allowed browser origin for the public SSE stream. The checkout page opens
+  // it cross-origin from another host, so the deployed API must name the web
+  // origin (or "*"). Not a secret; it only controls the CORS response header.
+  CORS_ORIGIN: z.string().default("*"),
 });
 
 // The API refuses to start against anything but Testnet. Zenith is Testnet-only

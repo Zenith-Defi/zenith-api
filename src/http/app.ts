@@ -2,6 +2,8 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { streamSSE } from "hono/streaming";
+import { cors } from "hono/cors";
+import { env } from "../env.js";
 import { authenticate, generateApiKey } from "../auth/apiKey.js";
 import { db, schema } from "../db/client.js";
 import { createRedis } from "../lib/redis.js";
@@ -47,6 +49,18 @@ export const app = new OpenAPIHono<{ Variables: Variables }>({
 function err(code: string, message: string) {
   return { error: { code, message } };
 }
+
+// The checkout page and dashboard run on a different origin, so browser calls
+// (notably the public SSE stream) need CORS. Origin is configurable and server
+// calls through the SDK are unaffected.
+app.use(
+  "*",
+  cors({
+    origin: env.CORS_ORIGIN,
+    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowHeaders: ["Authorization", "Content-Type", "Idempotency-Key"],
+  }),
+);
 
 // API-key auth on everything under /v1 except the public SSE stream, which a
 // checkout page opens from the browser with no key.
