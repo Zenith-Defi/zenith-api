@@ -36,13 +36,14 @@ async function main() {
     hash: key.hash,
     prefix: key.prefix,
     label: "seed",
+    scopes: ["read", "write"],
   });
 
   console.log("\n=== Demo merchant ===");
   console.log("Merchant id:      ", merchant!.id);
   console.log("Stellar account:  ", account);
   console.log("Secret (keep it): ", keypair.secret());
-  console.log("API key:          ", key.plaintext);
+  console.log("API key:          ", key.plaintext, "(read-write)");
   console.log("Horizon:          ", env.HORIZON_URL);
   console.log("\nExport the key for the SDK and CLI:");
   console.log(`  export ZENITH_API_KEY=${key.plaintext}\n`);

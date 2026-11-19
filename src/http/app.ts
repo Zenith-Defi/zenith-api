@@ -5,6 +5,7 @@ import { streamSSE } from "hono/streaming";
 import { cors } from "hono/cors";
 import { env } from "../env.js";
 import { authenticate, generateApiKey } from "../auth/apiKey.js";
+import { DEFAULT_SCOPES, scopesAllow } from "../auth/scopes.js";
 import { db, schema } from "../db/client.js";
 import { createRedis } from "../lib/redis.js";
 import { invoiceChannel } from "../events/emit.js";
@@ -68,6 +69,9 @@ app.use("/v1/*", async (c, next) => {
   if (c.req.path.match(/^\/v1\/invoices\/[^/]+\/events$/)) return next();
   const merchant = await authenticate(c.req.header("authorization"));
   if (!merchant) return c.json(err("unauthorized", "Missing or invalid API key"), 401);
+  if (!scopesAllow(merchant.scopes, c.req.method)) {
+    return c.json(err("forbidden", "This API key is read-only"), 403);
+  }
   c.set("merchantId", merchant.merchantId);
   return next();
 });
@@ -75,6 +79,7 @@ app.use("/v1/*", async (c, next) => {
 const jsonError = {
   400: { content: { "application/json": { schema: ErrorSchema } }, description: "Invalid request" },
   401: { content: { "application/json": { schema: ErrorSchema } }, description: "Unauthorized" },
+  403: { content: { "application/json": { schema: ErrorSchema } }, description: "Key lacks the write scope" },
   404: { content: { "application/json": { schema: ErrorSchema } }, description: "Not found" },
 };
 
@@ -372,11 +377,11 @@ const createApiKeyRoute = createRoute({
 
 app.openapi(createApiKeyRoute, async (c) => {
   const merchantId = c.get("merchantId");
-  const { label } = c.req.valid("json");
+  const { label, scopes } = c.req.valid("json");
   const key = generateApiKey();
   const [row] = await db
     .insert(schema.apiKeys)
-    .values({ merchantId, hash: key.hash, prefix: key.prefix, label: label ?? null })
+    .values({ merchantId, hash: key.hash, prefix: key.prefix, label: label ?? null, scopes: scopes ?? DEFAULT_SCOPES })
     .returning();
   return c.json({ ...serializeApiKey(row!), plaintext: key.plaintext }, 201);
 });

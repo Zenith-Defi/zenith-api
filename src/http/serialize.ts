@@ -1,5 +1,6 @@
 import { env } from "../env.js";
 import type { schema } from "../db/client.js";
+import type { ApiKeyScope } from "../auth/scopes.js";
 
 type InvoiceRow = typeof schema.invoices.$inferSelect;
 type PaymentRow = typeof schema.payments.$inferSelect;
@@ -74,6 +75,7 @@ export function serializeApiKey(row: ApiKeyRow) {
     id: row.id,
     prefix: row.prefix,
     label: row.label,
+    scopes: row.scopes as ApiKeyScope[],
     lastUsedAt: row.lastUsedAt ? row.lastUsedAt.toISOString() : null,
     revokedAt: row.revokedAt ? row.revokedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
