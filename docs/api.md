@@ -74,3 +74,9 @@ Creating an endpoint returns its signing `secret` once. Store it; it is not retu
 ## Errors
 
 Errors are `{ "error": { "code": "...", "message": "..." } }` with a matching HTTP status: `400` invalid request, `401` bad key, `404` not found, `409` conflict.
+
+## API key scopes
+
+Each key carries a scope set. `read` allows `GET` requests. `write` allows everything that changes state: creating and cancelling invoices, managing webhook endpoints, replaying deliveries, and creating or revoking keys. A key with only `read` that calls a write endpoint gets `403` with error code `forbidden`.
+
+`POST /v1/api-keys` takes an optional `scopes` array, for example `{ "label": "dashboard", "scopes": ["read"] }`. When it is left out the new key gets `["read", "write"]`. Keys created before scopes existed, and the key printed by `pnpm seed`, are read-write.

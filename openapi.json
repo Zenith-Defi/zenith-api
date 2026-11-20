@@ -405,6 +405,16 @@
             "type": "string",
             "nullable": true
           },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "write"
+              ]
+            }
+          },
           "lastUsedAt": {
             "type": "string",
             "nullable": true
@@ -421,6 +431,7 @@
           "id",
           "prefix",
           "label",
+          "scopes",
           "lastUsedAt",
           "revokedAt",
           "createdAt"
@@ -432,6 +443,17 @@
           "label": {
             "type": "string",
             "maxLength": 120
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "write"
+              ]
+            },
+            "minItems": 1
           }
         }
       }
@@ -494,6 +516,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key lacks the write scope",
             "content": {
               "application/json": {
                 "schema": {
@@ -584,6 +616,16 @@
               }
             }
           },
+          "403": {
+            "description": "Key lacks the write scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -641,6 +683,16 @@
               }
             }
           },
+          "403": {
+            "description": "Key lacks the write scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -690,6 +742,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key lacks the write scope",
             "content": {
               "application/json": {
                 "schema": {
@@ -792,6 +854,16 @@
               }
             }
           },
+          "403": {
+            "description": "Key lacks the write scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -863,6 +935,16 @@
               }
             }
           },
+          "403": {
+            "description": "Key lacks the write scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -911,6 +993,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key lacks the write scope",
             "content": {
               "application/json": {
                 "schema": {
@@ -1007,6 +1099,16 @@
               }
             }
           },
+          "403": {
+            "description": "Key lacks the write scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -1050,6 +1152,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key lacks the write scope",
             "content": {
               "application/json": {
                 "schema": {
@@ -1124,6 +1236,16 @@
               }
             }
           },
+          "403": {
+            "description": "Key lacks the write scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -1163,6 +1285,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key lacks the write scope",
             "content": {
               "application/json": {
                 "schema": {
@@ -1242,6 +1374,16 @@
               }
             }
           },
+          "403": {
+            "description": "Key lacks the write scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not found",
             "content": {
@@ -1290,6 +1432,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key lacks the write scope",
             "content": {
               "application/json": {
                 "schema": {
@@ -1348,6 +1500,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Key lacks the write scope",
             "content": {
               "application/json": {
                 "schema": {

@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const invoiceStatus = pgEnum("invoice_status", [
   "open",
@@ -54,6 +55,8 @@ export const apiKeys = pgTable(
     // A short non-secret prefix so a key is recognisable in a list.
     prefix: text("prefix").notNull(),
     label: text("label"),
+    // "read" lets a key call GET endpoints, "write" lets it change state.
+    scopes: text("scopes").array().notNull().default(sql`ARRAY['read','write']::text[]`),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

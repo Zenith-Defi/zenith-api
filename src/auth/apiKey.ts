@@ -31,6 +31,7 @@ export function hashApiKey(plaintext: string): string {
 export interface AuthedMerchant {
   merchantId: string;
   apiKeyId: string;
+  scopes: string[];
 }
 
 export async function authenticate(headerValue: string | undefined): Promise<AuthedMerchant | null> {
@@ -45,5 +46,5 @@ export async function authenticate(headerValue: string | undefined): Promise<Aut
     .set({ lastUsedAt: new Date() })
     .where(eq(schema.apiKeys.id, row.id))
     .catch(() => undefined);
-  return { merchantId: row.merchantId, apiKeyId: row.id };
+  return { merchantId: row.merchantId, apiKeyId: row.id, scopes: row.scopes };
 }

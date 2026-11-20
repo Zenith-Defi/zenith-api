@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { API_KEY_SCOPES } from "../auth/scopes.js";
 
 // Amounts are strings of integer stroops. A JSON number could not carry a
 // 64-bit stroop value without precision loss, so the wire type is a string and
@@ -80,6 +81,7 @@ export const ApiKeySchema = z
     id: z.string().uuid(),
     prefix: z.string().openapi({ example: "zk_test_ABCD" }),
     label: z.string().nullable(),
+    scopes: z.array(z.enum(API_KEY_SCOPES)),
     lastUsedAt: z.string().nullable(),
     revokedAt: z.string().nullable(),
     createdAt: z.string(),
@@ -87,7 +89,10 @@ export const ApiKeySchema = z
   .openapi("ApiKey");
 
 export const CreateApiKeySchema = z
-  .object({ label: z.string().max(120).optional() })
+  .object({
+    label: z.string().max(120).optional(),
+    scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).optional(),
+  })
   .openapi("CreateApiKey");
 
 export const MerchantSchema = z
