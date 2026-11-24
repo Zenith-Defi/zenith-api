@@ -73,4 +73,14 @@ Creating an endpoint returns its signing `secret` once. Store it; it is not retu
 
 ## Errors
 
-Errors are `{ "error": { "code": "...", "message": "..." } }` with a matching HTTP status: `400` invalid request, `401` bad key, `404` not found, `409` conflict.
+Errors are `{ "error": { "code": "...", "message": "..." } }` with a matching HTTP status: `400` invalid request, `401` bad key, `404` not found, `409` conflict, `429` rate limited.
+
+## Rate limiting
+
+Every authenticated `/v1` request counts against its API key, backed by Redis. The default is 120 requests per 60 seconds; set `RATE_LIMIT_MAX` and `RATE_LIMIT_WINDOW_SECONDS` to change it. Each response carries the standard headers:
+
+- `RateLimit-Limit`: requests allowed per window
+- `RateLimit-Remaining`: requests left in the current window
+- `RateLimit-Reset`: seconds until the window resets
+
+Past the limit the API answers `429` with a `Retry-After` header (seconds) and the usual error body with code `rate_limited`. The public invoice event stream (`GET /v1/invoices/:id/events`) and `GET /healthz` are not limited. If Redis is unreachable the limiter lets requests through rather than failing them.
