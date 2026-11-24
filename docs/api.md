@@ -34,6 +34,8 @@ For native XLM, use `{ "code": "XLM", "issuer": null }`.
 
 The response is the invoice, including `muxedAddress` (where the customer pays) and `checkoutUrl` (the hosted page). Repeating a request with the same `Idempotency-Key` returns the first response and does not create a second invoice. Reusing a key with a different body is a `409`.
 
+Every invoice also carries `amountReceived` and `amountRemaining`, both in stroops. `amountRemaining` is what is still owed while the invoice is `open` or `underpaid` and `"0"` otherwise. While something is owed, `topUpAddress` is the address to send the rest to (the invoice's own `muxedAddress`, so the extra payment is matched to the same invoice); once nothing is owed it is `null`. When the payments add up to the full amount, the invoice flips to `paid`.
+
 ## Fetch and list
 
 ```

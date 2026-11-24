@@ -1,5 +1,6 @@
 import { env } from "../env.js";
 import type { schema } from "../db/client.js";
+import { amountRemaining } from "../invoice/stateMachine.js";
 
 type InvoiceRow = typeof schema.invoices.$inferSelect;
 type PaymentRow = typeof schema.payments.$inferSelect;
@@ -38,6 +39,7 @@ export function checkoutUrl(invoiceId: bigint): string {
 }
 
 export function serializeInvoice(row: InvoiceRow) {
+  const remaining = amountRemaining(row.status, BigInt(row.amount), BigInt(row.amountReceived));
   return {
     id: row.id.toString(),
     status: row.status,
@@ -45,6 +47,9 @@ export function serializeInvoice(row: InvoiceRow) {
     asset: { code: row.assetCode, issuer: row.assetIssuer },
     amount: row.amount,
     amountReceived: row.amountReceived,
+    amountRemaining: remaining.toString(),
+    // The same muxed address keeps working for top-ups; null once nothing is owed.
+    topUpAddress: remaining > 0n ? row.muxedAddress : null,
     memo: row.memo,
     currencyDisplay: row.currencyDisplay,
     muxedAddress: row.muxedAddress,

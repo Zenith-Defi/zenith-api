@@ -70,6 +70,17 @@
             "description": "Integer stroops as a decimal string",
             "example": "125000000"
           },
+          "amountRemaining": {
+            "type": "string",
+            "pattern": "^\\d+$",
+            "description": "Stroops still owed. Zero unless the invoice is open or underpaid.",
+            "example": "125000000"
+          },
+          "topUpAddress": {
+            "type": "string",
+            "nullable": true,
+            "description": "Address to send the remainder to while the invoice is open or underpaid; null otherwise."
+          },
           "memo": {
             "type": "string",
             "nullable": true
@@ -105,6 +116,8 @@
           "asset",
           "amount",
           "amountReceived",
+          "amountRemaining",
+          "topUpAddress",
           "memo",
           "currencyDisplay",
           "muxedAddress",
