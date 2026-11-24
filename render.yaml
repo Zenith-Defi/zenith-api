@@ -52,3 +52,12 @@ services:
     plan: starter
     envVars:
       - fromGroup: zenith-shared
+
+  - type: worker
+    name: zenith-sweeper
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: node dist/invoice/sweeper.js
+    plan: starter
+    envVars:
+      - fromGroup: zenith-shared

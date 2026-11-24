@@ -84,6 +84,7 @@ See [docs/api.md](docs/api.md), [docs/webhooks.md](docs/webhooks.md) and [docs/a
 - `pnpm dev` / `pnpm start` — run the API
 - `pnpm worker` — webhook delivery worker
 - `pnpm watcher` — Horizon payment watcher
+- `pnpm sweeper` — expires lapsed invoices (`EXPIRY_SWEEP_INTERVAL_MS`, default 30000)
 - `pnpm db:generate` / `pnpm db:migrate` / `pnpm db:check`
 - `pnpm seed` — demo merchant and API key
 - `pnpm seed:demo` — fixed, publishable demo merchant for a hosted read-only demo
