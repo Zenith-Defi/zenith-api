@@ -36,6 +36,12 @@ export const InvoiceSchema = z
     asset: AssetSchema,
     amount: stroopString,
     amountReceived: stroopString,
+    amountRemaining: stroopString.openapi({
+      description: "Stroops still owed. Zero unless the invoice is open or underpaid.",
+    }),
+    topUpAddress: z.string().nullable().openapi({
+      description: "Address to send the remainder to while the invoice is open or underpaid; null otherwise.",
+    }),
     memo: z.string().nullable(),
     currencyDisplay: z.string().nullable(),
     muxedAddress: z.string().openapi({ example: "MA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVAAAAAAAAAAAAAJLK" }),

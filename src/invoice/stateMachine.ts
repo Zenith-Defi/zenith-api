@@ -26,6 +26,14 @@ export function isTerminal(status: InvoiceStatus): boolean {
   return TRANSITIONS[status].length === 0;
 }
 
+// Stroops still owed on an invoice. Only an invoice that can still be paid
+// (open or underpaid) has anything remaining; settled and closed invoices
+// report zero. Pure, so it is unit-testable without a database.
+export function amountRemaining(status: InvoiceStatus, expected: bigint, received: bigint): bigint {
+  if (status !== "open" && status !== "underpaid") return 0n;
+  return received >= expected ? 0n : expected - received;
+}
+
 // Given the total received against the expected amount, the status a payment
 // should drive the invoice to. Kept pure so it is unit-testable without a
 // database or Horizon.
