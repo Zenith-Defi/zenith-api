@@ -16,6 +16,9 @@ const schema = z.object({
   // it cross-origin from another host, so the deployed API must name the web
   // origin (or "*"). Not a secret; it only controls the CORS response header.
   CORS_ORIGIN: z.string().default("*"),
+  // Per-API-key request limit: RATE_LIMIT_MAX requests per RATE_LIMIT_WINDOW_SECONDS.
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
+  RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
 });
 
 // The API refuses to start against anything but Testnet. Zenith is Testnet-only

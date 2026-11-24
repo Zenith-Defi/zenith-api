@@ -6,7 +6,8 @@ import { cors } from "hono/cors";
 import { env } from "../env.js";
 import { authenticate, generateApiKey } from "../auth/apiKey.js";
 import { db, schema } from "../db/client.js";
-import { createRedis } from "../lib/redis.js";
+import { createRedis, redis } from "../lib/redis.js";
+import { rateLimit, redisStore } from "./rateLimit.js";
 import { invoiceChannel } from "../events/emit.js";
 import { webhookQueue } from "../webhooks/queue.js";
 import { cancelInvoice, createInvoice } from "../invoice/service.js";
@@ -33,7 +34,7 @@ import {
   WebhookEndpointSchema,
 } from "./schemas.js";
 
-type Variables = { merchantId: string };
+type Variables = { merchantId: string; apiKeyId: string };
 
 export const app = new OpenAPIHono<{ Variables: Variables }>({
   defaultHook: (result, c) => {
@@ -69,8 +70,21 @@ app.use("/v1/*", async (c, next) => {
   const merchant = await authenticate(c.req.header("authorization"));
   if (!merchant) return c.json(err("unauthorized", "Missing or invalid API key"), 401);
   c.set("merchantId", merchant.merchantId);
+  c.set("apiKeyId", merchant.apiKeyId);
   return next();
 });
+
+// Per-API-key rate limit. Runs after auth, so the public SSE stream (which sets
+// no key) is skipped; /healthz is outside /v1 and never limited.
+app.use(
+  "/v1/*",
+  rateLimit({
+    limit: env.RATE_LIMIT_MAX,
+    windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS,
+    store: redisStore(redis),
+    keyFor: (c) => (c.get("apiKeyId") as string | undefined) ?? null,
+  }),
+);
 
 const jsonError = {
   400: { content: { "application/json": { schema: ErrorSchema } }, description: "Invalid request" },
