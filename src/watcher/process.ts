@@ -62,45 +62,67 @@ export async function processPayment(merchantId: string, op: HorizonPayment): Pr
 
   const amountStroops = horizonAmountToStroops(op.amount);
 
-  const inserted = await db
-    .insert(schema.payments)
-    .values({
-      invoiceId,
-      merchantId,
-      horizonOperationId: op.id,
-      txHash: op.transaction_hash,
-      fromAccount: op.from,
-      assetCode: invoice.assetCode,
-      assetIssuer: invoice.assetIssuer,
-      amount: amountStroops.toString(),
-    })
-    .onConflictDoNothing({ target: schema.payments.horizonOperationId })
-    .returning({ id: schema.payments.id });
+  // Record the payment and advance the invoice in one transaction, holding a
+  // row lock on the invoice. The expiry sweeper updates the same row, so the
+  // two serialise: whichever takes the lock first decides the outcome.
+  const result = await db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(schema.payments)
+      .values({
+        invoiceId,
+        merchantId,
+        horizonOperationId: op.id,
+        txHash: op.transaction_hash,
+        fromAccount: op.from,
+        assetCode: invoice.assetCode,
+        assetIssuer: invoice.assetIssuer,
+        amount: amountStroops.toString(),
+      })
+      .onConflictDoNothing({ target: schema.payments.horizonOperationId })
+      .returning({ id: schema.payments.id });
 
-  // Already recorded on a prior run. Nothing to advance.
-  if (inserted.length === 0) return;
+    // Already recorded on a prior run. Nothing to advance.
+    if (inserted.length === 0) return null;
 
-  const previous = BigInt(invoice.amountReceived);
-  const total = previous + amountStroops;
-  const expected = BigInt(invoice.amount);
-  const nextStatus = statusForAmount(expected, total);
+    const [current] = await tx
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.id, invoiceId))
+      .for("update");
+    if (!current) return null;
 
-  // Do not move a terminal invoice backwards. An overpaid invoice stays overpaid.
-  const finalStatus =
-    invoice.status === "paid" || invoice.status === "overpaid" ? invoice.status : nextStatus;
+    const total = BigInt(current.amountReceived) + amountStroops;
+    const nextStatus = statusForAmount(BigInt(current.amount), total);
 
-  const [updated] = await db
-    .update(schema.invoices)
-    .set({
-      amountReceived: total.toString(),
-      status: finalStatus,
-      paidAt: finalStatus === "paid" || finalStatus === "overpaid" ? invoice.paidAt ?? new Date() : invoice.paidAt,
-      updatedAt: new Date(),
-    })
-    .where(eq(schema.invoices.id, invoiceId))
-    .returning();
+    // Do not move a terminal invoice backwards. An overpaid invoice stays
+    // overpaid, and an invoice the sweeper already expired stays expired: the
+    // payment is still recorded and counted in amountReceived so it can be
+    // reconciled or refunded, but it does not revive the invoice.
+    const finalStatus =
+      current.status === "paid" || current.status === "overpaid" || current.status === "expired"
+        ? current.status
+        : nextStatus;
 
-  const serialized = serializeInvoice(updated!);
+    const [updated] = await tx
+      .update(schema.invoices)
+      .set({
+        amountReceived: total.toString(),
+        status: finalStatus,
+        paidAt:
+          finalStatus === "paid" || finalStatus === "overpaid"
+            ? current.paidAt ?? new Date()
+            : current.paidAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.invoices.id, invoiceId))
+      .returning();
+    return updated ? { updated, finalStatus } : null;
+  });
+
+  if (!result) return;
+  const { updated, finalStatus } = result;
+
+  const serialized = serializeInvoice(updated);
   await publishInvoiceUpdate(invoiceId, { type: "invoice.updated", invoice: serialized });
 
   if (finalStatus === "paid" || finalStatus === "overpaid") {

@@ -33,6 +33,15 @@ Two properties make this safe:
 - **Idempotent.** `payments.horizon_operation_id` is unique. A second sight of the same operation inserts nothing and advances no total, so the watcher is safe to run twice on the same payment.
 - **Resumable.** The cursor is saved after each handled operation. A crash resumes from the last one; because processing is idempotent, replaying the final operation is a no-op.
 
+## Invoice expiry
+
+The sweeper (`pnpm sweeper`) runs every 30 seconds and moves `open` and `underpaid` invoices whose `expires_at` has passed to `expired`, then emits `invoice.expired`. The move is one conditional `UPDATE ... RETURNING`, so each invoice changes state once and the event fires once per invoice, even if two sweepers overlap.
+
+The watcher and the sweeper contend on the same invoice row. `processPayment` locks the row (`SELECT ... FOR UPDATE`) while it records a payment, so a payment and an expiry in the same tick are resolved by whichever transaction takes the lock first:
+
+- Payment first: the invoice becomes `paid`, `overpaid` or `underpaid`. If it is still `underpaid` and past its expiry, the next sweep expires it.
+- Expiry first: the invoice stays `expired`. The payment is still recorded and added to `amount_received` so it can be reconciled or refunded, but no `invoice.paid` webhook fires and the status is not revived.
+
 ## Live updates
 
 When an invoice changes, the watcher publishes to a per-invoice Redis channel. The API's SSE handler subscribes to that channel, so a checkout page open in the browser flips to paid within about a second of detection, across process boundaries.
